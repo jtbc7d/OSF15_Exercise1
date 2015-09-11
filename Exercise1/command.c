@@ -9,13 +9,25 @@
 #define MAX_CMD_LEN 25
 
 
-	//TODO FUNCTION COMMENT
+/*
+ * PURPOSE: reads the user's input and puts it within an array checks indexes of that array for a valid command
+ * INPUTS:
+ *	input the text the user has typed
+ *  cmd array text is put within, indexes are used for passed to appropiate functions
+ * RETURN:
+ **/
+
 bool parse_user_input (const char* input, Commands_t** cmd) {
-	
-	//TODO ERROR CHECK INCOMING PARAMETERS
+
+	if(!input)
+		return false;
+
+	if(!cmd)
+		return false;
+
 
 	char *string = strdup(input);
-	
+
 	*cmd = calloc (1,sizeof(Commands_t));
 	(*cmd)->cmds = calloc(MAX_CMD_COUNT,sizeof(char*));
 
@@ -27,7 +39,7 @@ bool parse_user_input (const char* input, Commands_t** cmd) {
 		if (!(*cmd)->cmds[i]) {
 			perror("Allocation Error\n");
 			return false;
-		}	
+		}
 		strncpy((*cmd)->cmds[i],token, strlen(token) + 1);
 		(*cmd)->num_cmds++;
 		token = strtok(NULL, " \n");
@@ -36,11 +48,18 @@ bool parse_user_input (const char* input, Commands_t** cmd) {
 	return true;
 }
 
-	//TODO FUNCTION COMMENT
+/*
+ * PURPOSE: destroys the command array
+ * INPUTS:
+ *	cmd the array filled with user commands to be freed
+ * RETURN:
+ **/
+
 void destroy_commands(Commands_t** cmd) {
 
-	//TODO ERROR CHECK INCOMING PARAMETERS
-	
+	if(!cmd)
+		return;
+
 	for (int i = 0; i < (*cmd)->num_cmds; ++i) {
 		free((*cmd)->cmds[i]);
 	}
@@ -48,4 +67,3 @@ void destroy_commands(Commands_t** cmd) {
 	free((*cmd));
 	*cmd = NULL;
 }
-
