@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
+#include <ctype.h>
 
 
 #include "matrix.h"
@@ -18,10 +19,10 @@
 /*protected functions*/
 void load_matrix (Matrix_t* m, unsigned int* data);
 
-/* 
- * PURPOSE: instantiates a new matrix with the passed name, rows, cols 
- * INPUTS: 
- *	name the name of the matrix limited to 50 characters 
+/*
+ * PURPOSE: instantiates a new matrix with the passed name, rows, cols
+ * INPUTS:
+ *	name the name of the matrix limited to 50 characters
  *  rows the number of rows the matrix
  *  cols the number of cols the matrix
  * RETURN:
@@ -34,6 +35,9 @@ bool create_matrix (Matrix_t** new_matrix, const char* name, const unsigned int 
 						const unsigned int cols) {
 
 	//TODO ERROR CHECK INCOMING PARAMETERS
+	if(rows < 0 || cols < 0)
+		return false;
+
 
 	*new_matrix = calloc(1,sizeof(Matrix_t));
 	if (!(*new_matrix)) {
@@ -45,7 +49,7 @@ bool create_matrix (Matrix_t** new_matrix, const char* name, const unsigned int 
 	}
 	(*new_matrix)->rows = rows;
 	(*new_matrix)->cols = cols;
-	unsigned int len = strlen(name) + 1; 
+	unsigned int len = strlen(name) + 1;
 	if (len > MATRIX_NAME_LEN) {
 		return false;
 	}
@@ -54,27 +58,40 @@ bool create_matrix (Matrix_t** new_matrix, const char* name, const unsigned int 
 
 }
 
-	//TODO FUNCTION COMMENT
+/*
+* PURPOSE: Free's the data of a matrix to memory
+* INPUTS:
+* m the matrix to be destroyed
+* RETURN:
+**/
 
 void destroy_matrix (Matrix_t** m) {
 
-	//TODO ERROR CHECK INCOMING PARAMETERS
-	
+	if(!m)
+		return;
+
 	free((*m)->data);
 	free(*m);
 	*m = NULL;
 }
 
 
-	
-	//TODO FUNCTION COMMENT
+
+/*
+ * PURPOSE:check if the contents of two matrices are equal
+ * INPUTS:
+ *  a the first matrix to be compared
+ *  b the second matrix to be compared
+ * RETURN:
+ * true if the operation is successful false if not
+ **/
+
 bool equal_matrices (Matrix_t* a, Matrix_t* b) {
 
-	//TODO ERROR CHECK INCOMING PARAMETERS
-	
 	if (!a || !b || !a->data || !b->data) {
-		return false;	
+		return false;
 	}
+
 
 	int result = memcmp(a->data,b->data, sizeof(unsigned int) * a->rows * a->cols);
 	if (result == 0) {
@@ -83,11 +100,19 @@ bool equal_matrices (Matrix_t* a, Matrix_t* b) {
 	return false;
 }
 
-	//TODO FUNCTION COMMENT
+		/*
+	 * PURPOSE:copies data of a matrix into a newly instantiated matrix
+	 * INPUTS:
+	 *  src the matrix to be copied
+	 *  dest newly created matrix where copied data is passed to
+	 * RETURN:
+	 **/
 bool duplicate_matrix (Matrix_t* src, Matrix_t* dest) {
 
 
-	//TODO ERROR CHECK INCOMING PARAMETERS
+	if (!dest) {
+		return false;
+	}
 
 	if (!src) {
 		return false;
@@ -96,23 +121,36 @@ bool duplicate_matrix (Matrix_t* src, Matrix_t* dest) {
 	 * copy over data
 	 */
 	unsigned int bytesToCopy = sizeof(unsigned int) * src->rows * src->cols;
-	memcpy(src->data,dest->data, bytesToCopy);	
+	memcpy(dest->data,src->data, bytesToCopy);
 	return equal_matrices (src,dest);
 }
 
-	//TODO FUNCTION COMMENT
+/*
+* PURPOSE:bitwise shifts a matrix either to the left or right
+* INPUTS:
+*  a the matrix to be shifted
+*  direction the direction the matrix is to be shifted
+*  shift how much the matrix is to be shifted by
+* RETURN: returns true if the operation was successful, false if the operation failed
+**/
 bool bitwise_shift_matrix (Matrix_t* a, char direction, unsigned int shift) {
-	
-	//TODO ERROR CHECK INCOMING PARAMETERS
+
+
 	if (!a) {
 		return false;
 	}
+
+	if(direction != 'l' || direction != 'r')
+		return false;
+
+	if(shift <= 0)
+		return false;
 
 	if (direction == 'l') {
 		unsigned int i = 0;
 		for (; i < a->rows; ++i) {
 			unsigned int j = 0;
-			for (; j < a->rows; ++j) {
+			for (; j < a->cols; ++j) {
 				a->data[i * a->cols + j] = a->data[i * a->cols + j] << shift;
 			}
 		}
@@ -127,14 +165,27 @@ bool bitwise_shift_matrix (Matrix_t* a, char direction, unsigned int shift) {
 			}
 		}
 	}
-	
+
 	return true;
 }
 
-	//TODO FUNCTION COMMENT
+/*
+* PURPOSE:add two matrices together and creates new matrix with values of the result
+* INPUTS:
+* a matrix, the first operand
+* b matrix, the second operand
+* c matrix, empty matrix where results will be stored
+* RETURN:
+*  true if the operation was successful, false if the operation failed
+**/
 bool add_matrices (Matrix_t* a, Matrix_t* b, Matrix_t* c) {
 
-	//TODO ERROR CHECK INCOMING PARAMETERS
+	if(!a || !b)
+		return false;
+
+	if(c == NULL)
+		return false;
+
 
 	if (a->rows != b->rows && a->cols != b->cols) {
 		return false;
@@ -148,11 +199,16 @@ bool add_matrices (Matrix_t* a, Matrix_t* b, Matrix_t* c) {
 	return true;
 }
 
-	//TODO FUNCTION COMMENT
+		/*
+	 * PURPOSE:shows the values stored within the matrix
+	 * INPUTS:
+	 *	m matrix to be displayed
+	 * RETURN:
+	 **/
 void display_matrix (Matrix_t* m) {
-	
-	//TODO ERROR CHECK INCOMING PARAMETERS
 
+	if(!m || !m->data)
+		return;
 
 	printf("\nMatrix Contents (%s):\n", m->name);
 	printf("DIM = (%u,%u)\n", m->rows, m->cols);
@@ -166,10 +222,21 @@ void display_matrix (Matrix_t* m) {
 
 }
 
-	//TODO FUNCTION COMMENT
+/*
+* PURPOSE: reads a file from the filesystem and writes it to a new matrix
+* INPUTS:
+*  matrix_input_filename filename of the file to be read
+*	m the empty matrix to which the file will be written into
+* RETURN:
+*	true if the operation is successful, false along with specific error messsage if the operation fails
+*
+**/
+
 bool read_matrix (const char* matrix_input_filename, Matrix_t** m) {
-	
-	//TODO ERROR CHECK INCOMING PARAMETERS
+
+	if(!m)
+		return false;
+
 
 
 	int fd = open(matrix_input_filename,O_RDONLY);
@@ -182,7 +249,7 @@ bool read_matrix (const char* matrix_input_filename, Matrix_t** m) {
 			perror("FILE ALREADY IN USE\n");
 		}
 		else if (errno == EBADF) {
-			perror("BAD FILE DESCRIPTOR\n");	
+			perror("BAD FILE DESCRIPTOR\n");
 		}
 		else if (errno == EEXIST) {
 			perror("FILE EXIST\n");
@@ -194,7 +261,7 @@ bool read_matrix (const char* matrix_input_filename, Matrix_t** m) {
 	unsigned int name_len = 0;
 	unsigned int rows = 0;
 	unsigned int cols = 0;
-	
+
 	if (read(fd,&name_len,sizeof(unsigned int)) != sizeof(unsigned int)) {
 		printf("FAILED TO READING FILE\n");
 		if (errno == EACCES ) {
@@ -204,7 +271,7 @@ bool read_matrix (const char* matrix_input_filename, Matrix_t** m) {
 			perror("FILE ALREADY IN USE\n");
 		}
 		else if (errno == EBADF) {
-			perror("BAD FILE DESCRIPTOR\n");	
+			perror("BAD FILE DESCRIPTOR\n");
 		}
 		else if (errno == EEXIST) {
 			perror("FILE EXIST\n");
@@ -221,13 +288,13 @@ bool read_matrix (const char* matrix_input_filename, Matrix_t** m) {
 			perror("FILE ALREADY IN USE\n");
 		}
 		else if (errno == EBADF) {
-			perror("BAD FILE DESCRIPTOR\n");	
+			perror("BAD FILE DESCRIPTOR\n");
 		}
 		else if (errno == EEXIST) {
 			perror("FILE EXIST\n");
 		}
 
-		return false;	
+		return false;
 	}
 
 	if (read (fd,&rows, sizeof(unsigned int)) != sizeof(unsigned int)) {
@@ -239,7 +306,7 @@ bool read_matrix (const char* matrix_input_filename, Matrix_t** m) {
 			perror("FILE ALREADY IN USE\n");
 		}
 		else if (errno == EBADF) {
-			perror("BAD FILE DESCRIPTOR\n");	
+			perror("BAD FILE DESCRIPTOR\n");
 		}
 		else if (errno == EEXIST) {
 			perror("FILE EXIST\n");
@@ -257,7 +324,7 @@ bool read_matrix (const char* matrix_input_filename, Matrix_t** m) {
 			perror("FILE ALREADY IN USE\n");
 		}
 		else if (errno == EBADF) {
-			perror("BAD FILE DESCRIPTOR\n");	
+			perror("BAD FILE DESCRIPTOR\n");
 		}
 		else if (errno == EEXIST) {
 			perror("FILE EXIST\n");
@@ -277,13 +344,13 @@ bool read_matrix (const char* matrix_input_filename, Matrix_t** m) {
 			perror("FILE ALREADY IN USE\n");
 		}
 		else if (errno == EBADF) {
-			perror("BAD FILE DESCRIPTOR\n");	
+			perror("BAD FILE DESCRIPTOR\n");
 		}
 		else if (errno == EEXIST) {
 			perror("FILE EXIST\n");
 		}
 
-		return false;	
+		return false;
 	}
 
 	if (!create_matrix(m,name_buffer,rows,cols)) {
@@ -291,7 +358,7 @@ bool read_matrix (const char* matrix_input_filename, Matrix_t** m) {
 	}
 
 	load_matrix(*m,data);
-
+	free(data);
 	if (close(fd)) {
 		return false;
 
@@ -299,10 +366,18 @@ bool read_matrix (const char* matrix_input_filename, Matrix_t** m) {
 	return true;
 }
 
-	//TODO FUNCTION COMMENT
+/*
+* PURPOSE: Writes a matrix into the filesystem
+* INPUTS:
+* 	matrix_output_filename name of the file to be created
+*  the matrix to be written to the filesystem
+* RETURN:
+*  true if the matrix is able to be written to the filesystem, false along with specific error messages if operation fails
+**/
 bool write_matrix (const char* matrix_output_filename, Matrix_t* m) {
-	
-	//TODO ERROR CHECK INCOMING PARAMETERS
+
+	if(!matrix_output_filename)
+		return false;
 
 	int fd = open (matrix_output_filename, O_CREAT | O_RDWR | O_TRUNC, 0644);
 	/* ERROR HANDLING USING errorno*/
@@ -315,7 +390,7 @@ bool write_matrix (const char* matrix_output_filename, Matrix_t* m) {
 			perror("FILE ALREADY IN USE\n");
 		}
 		else if (errno == EBADF) {
-			perror("BAD FILE DESCRIPTOR\n");	
+			perror("BAD FILE DESCRIPTOR\n");
 		}
 		else if (errno == EEXIST) {
 			perror("FILE EXISTS\n");
@@ -331,7 +406,7 @@ bool write_matrix (const char* matrix_output_filename, Matrix_t* m) {
 	unsigned char* output_buffer = calloc(numberOfBytes,sizeof(unsigned char));
 	unsigned int offset = 0;
 	memcpy(&output_buffer[offset], &name_len, sizeof(unsigned int)); // IMPORTANT C FUNCTION TO KNOW
-	offset += sizeof(unsigned int);	
+	offset += sizeof(unsigned int);
 	memcpy(&output_buffer[offset], m->name,name_len);
 	offset += name_len;
 	memcpy(&output_buffer[offset],&m->rows,sizeof(unsigned int));
@@ -351,14 +426,14 @@ bool write_matrix (const char* matrix_output_filename, Matrix_t* m) {
 			perror("FILE ALREADY IN USE\n");
 		}
 		else if (errno == EBADF) {
-			perror("BAD FILE DESCRIPTOR\n");	
+			perror("BAD FILE DESCRIPTOR\n");
 		}
 		else if (errno == EEXIST) {
 			perror("FILE EXIST\n");
 		}
 		return false;
 	}
-	
+
 	if (close(fd)) {
 		return false;
 	}
@@ -367,14 +442,20 @@ bool write_matrix (const char* matrix_output_filename, Matrix_t* m) {
 	return true;
 }
 
-	//TODO FUNCTION COMMENT
+/*
+* PURPOSE: fills the matrix with random numbers from a specified range
+* INPUTS:
+*  m the matrix to be filled
+* RETURN:
+**/
 bool random_matrix(Matrix_t* m, unsigned int start_range, unsigned int end_range) {
-	
-	//TODO ERROR CHECK INCOMING PARAMETERS
+
+	if(!m || !m->data)
+		return false;
 
 	for (unsigned int i = 0; i < m->rows; ++i) {
 		for (unsigned int j = 0; j < m->cols; ++j) {
-			m->data[i * m->cols + j] = rand() % end_range + start_range;
+			m->data[i * m->cols + j] = rand() % (end_range + 1 - start_range) + start_range;
 		}
 	}
 	return true;
@@ -382,22 +463,47 @@ bool random_matrix(Matrix_t* m, unsigned int start_range, unsigned int end_range
 
 /*Protected Functions in C*/
 
-	//TODO FUNCTION COMMENT
+		/*
+	 * PURPOSE:allocates proper ammount of memory to a matrix
+	 * INPUTS:
+	 *  m matrix to be loaded with memory
+	 *  data pointer to data to be loaded in
+	 * RETURN:
+	 **/
 void load_matrix (Matrix_t* m, unsigned int* data) {
-	
-	//TODO ERROR CHECK INCOMING PARAMETERS
+
+		if(!m)
+			return;
+
+		if(!data)
+			return;
+
 	memcpy(m->data,data,m->rows * m->cols * sizeof(unsigned int));
 }
 
-	//TODO FUNCTION COMMENT
+/*
+* PURPOSE: adds matrix to array of matrices
+* INPUTS:
+*	mats the array of matrics
+*	new_matrix the matrix to be added to the array
+*	num_mats the size of the matrix array
+* RETURN:
+*	the index of the newly added matrix
+**/
+
 unsigned int add_matrix_to_array (Matrix_t** mats, Matrix_t* new_matrix, unsigned int num_mats) {
-	
-	//TODO ERROR CHECK INCOMING PARAMETERS
+
+	if(!mats || !new_matrix)
+		return -1;
+
+	if(num_mats < 0)
+		return -1;
+
 	static long int current_position = 0;
 	const long int pos = current_position % num_mats;
 	if ( mats[pos] ) {
 		destroy_matrix(&mats[pos]);
-	} 
+	}
 	mats[pos] = new_matrix;
 	current_position++;
 	return pos;
